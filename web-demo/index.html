@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XXTEA Encryption/Decryption Demo</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #86868b;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        .container {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 32px;
+            width: 100%;
+            max-width: 600px;
+        }
+        .field {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6e6e73;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d2d2d7;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+            transition: border-color 0.2s;
+            background: #fafafa;
+            resize: vertical;
+        }
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #0071e3;
+            box-shadow: 0 0 0 3px rgba(0,113,227,0.15);
+        }
+        textarea {
+            min-height: 80px;
+        }
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:active {
+            transform: scale(0.97);
+        }
+        .btn-encrypt {
+            background: #0071e3;
+            color: #fff;
+        }
+        .btn-encrypt:hover {
+            background: #0077ed;
+        }
+        .btn-decrypt {
+            background: #34c759;
+            color: #fff;
+        }
+        .btn-decrypt:hover {
+            background: #30d158;
+        }
+        .btn-clear {
+            background: #ff3b30;
+            color: #fff;
+            flex: 0.5;
+        }
+        .btn-clear:hover {
+            background: #ff453a;
+        }
+        .btn-swap {
+            background: #ff9500;
+            color: #fff;
+            flex: 0.5;
+        }
+        .btn-swap:hover {
+            background: #ff9f0a;
+        }
+        .output-section {
+            background: #f5f5f7;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .output-section label {
+            margin-bottom: 8px;
+        }
+        #output {
+            background: #fff;
+            min-height: 80px;
+        }
+        .status {
+            text-align: center;
+            font-size: 13px;
+            min-height: 20px;
+            margin-top: 8px;
+        }
+        .status.success {
+            color: #34c759;
+        }
+        .status.error {
+            color: #ff3b30;
+        }
+        .info {
+            color: #86868b;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .test-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e5ea;
+        }
+        .test-section h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #1d1d1f;
+        }
+        .test-btn {
+            background: #5856d6;
+            color: #fff;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        .test-btn:hover {
+            background: #5e5ce6;
+        }
+        #test-results {
+            font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+            font-size: 12px;
+            background: #1d1d1f;
+            color: #30d158;
+            border-radius: 10px;
+            padding: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .test-pass { color: #30d158; }
+        .test-fail { color: #ff453a; }
+        .test-info { color: #ffd60a; }
+    </style>
+</head>
+<body>
+    <h1>XXTEA Demo</h1>
+    <p class="subtitle">Encryption &amp; Decryption &mdash; JavaScript port of the iOS XXTEA library</p>
+
+    <div class="container">
+        <div class="field">
+            <label for="input">Input Text</label>
+            <textarea id="input" placeholder="Enter text to encrypt or Base64 ciphertext to decrypt..."></textarea>
+        </div>
+
+        <div class="field">
+            <label for="key">Key</label>
+            <input type="text" id="key" placeholder="Enter encryption key (e.g. 1234567890)">
+            <p class="info">Key is padded/truncated to 16 bytes internally.</p>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn-encrypt" onclick="doEncrypt()">Encrypt</button>
+            <button class="btn-decrypt" onclick="doDecrypt()">Decrypt</button>
+            <button class="btn-swap" onclick="doSwap()" title="Copy output to input">Swap</button>
+            <button class="btn-clear" onclick="doClear()">Clear</button>
+        </div>
+
+        <div class="output-section">
+            <label for="output">Output</label>
+            <textarea id="output" readonly placeholder="Result will appear here..."></textarea>
+            <p id="status" class="status"></p>
+        </div>
+
+        <div class="test-section">
+            <h3>Built-in Tests</h3>
+            <button class="test-btn" onclick="runTests()">Run All Tests</button>
+            <div id="test-results"></div>
+        </div>
+    </div>
+
+    <script>
+    // =====================================================
+    // XXTEA JavaScript Implementation
+    // Ported from XXTEA_iOS (Objective-C)
+    // =====================================================
+
+    const DELTA = 0x9E3779B9;
+
+    function toUint32(n) {
+        return n >>> 0;
+    }
+
+    // Convert byte array to uint32 array
+    function bytesToUint32Array(bytes, includeLength) {
+        const length = bytes.length;
+        let n = ((length & 3) === 0) ? (length >>> 2) : ((length >>> 2) + 1);
+        let result;
+        if (includeLength) {
+            result = new Uint32Array(n + 1);
+            result[n] = length;
+        } else {
+            result = new Uint32Array(n);
+        }
+        for (let i = 0; i < length; i++) {
+            result[i >>> 2] |= bytes[i] << ((i & 3) << 3);
+        }
+        return result;
+    }
+
+    // Convert uint32 array back to byte array
+    function uint32ArrayToBytes(data, includeLength) {
+        let n = data.length << 2;
+        if (includeLength) {
+            let m = data[data.length - 1];
+            n -= 4;
+            if (m < n - 3 || m > n) return null;
+            n = m;
+        }
+        const bytes = new Uint8Array(n);
+        for (let i = 0; i < n; i++) {
+            bytes[i] = (data[i >>> 2] >>> ((i & 3) << 3)) & 0xff;
+        }
+        return bytes;
+    }
+
+    // XXTEA encrypt uint32 array in-place
+    function xxteaEncryptUint32(data, key) {
+        const n = data.length - 1;
+        if (n < 1) return data;
+
+        let z = data[n];
+        let y, p, q, sum = 0, e;
+        q = Math.floor(6 + 52 / (n + 1));
+
+        while (q-- > 0) {
+            sum = toUint32(sum + DELTA);
+            e = (sum >>> 2) & 3;
+            for (p = 0; p < n; p++) {
+                y = data[p + 1];
+                data[p] = toUint32(data[p] + (toUint32(((z >>> 5) ^ (y << 2)) + ((y >>> 3) ^ (z << 4))) ^ toUint32((sum ^ y) + (key[(p & 3) ^ e] ^ z))));
+                z = data[p];
+            }
+            y = data[0];
+            data[n] = toUint32(data[n] + (toUint32(((z >>> 5) ^ (y << 2)) + ((y >>> 3) ^ (z << 4))) ^ toUint32((sum ^ y) + (key[(p & 3) ^ e] ^ z))));
+            z = data[n];
+        }
+        return data;
+    }
+
+    // XXTEA decrypt uint32 array in-place
+    function xxteaDecryptUint32(data, key) {
+        const n = data.length - 1;
+        if (n < 1) return data;
+
+        let z, y = data[0];
+        let p, q, sum, e;
+        q = Math.floor(6 + 52 / (n + 1));
+        sum = toUint32(q * DELTA);
+
+        while (sum !== 0) {
+            e = (sum >>> 2) & 3;
+            for (p = n; p > 0; p--) {
+                z = data[p - 1];
+                data[p] = toUint32(data[p] - (toUint32(((z >>> 5) ^ (y << 2)) + ((y >>> 3) ^ (z << 4))) ^ toUint32((sum ^ y) + (key[(p & 3) ^ e] ^ z))));
+                y = data[p];
+            }
+            z = data[n];
+            data[0] = toUint32(data[0] - (toUint32(((z >>> 5) ^ (y << 2)) + ((y >>> 3) ^ (z << 4))) ^ toUint32((sum ^ y) + (key[(p & 3) ^ e] ^ z))));
+            y = data[0];
+            sum = toUint32(sum - DELTA);
+        }
+        return data;
+    }
+
+    // Fix key to 16 bytes (pad with zeros or truncate)
+    function fixKey(keyBytes) {
+        const fixed = new Uint8Array(16);
+        const len = Math.min(keyBytes.length, 16);
+        for (let i = 0; i < len; i++) {
+            fixed[i] = keyBytes[i];
+        }
+        return fixed;
+    }
+
+    // Encode string to UTF-8 bytes
+    function stringToBytes(str) {
+        return new TextEncoder().encode(str);
+    }
+
+    // Decode UTF-8 bytes to string
+    function bytesToString(bytes) {
+        return new TextDecoder().decode(bytes);
+    }
+
+    // Base64 encode bytes
+    function bytesToBase64(bytes) {
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    }
+
+    // Base64 decode to bytes
+    function base64ToBytes(base64) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    // Public API: Encrypt string with string key, return base64
+    function encryptStringToBase64(plaintext, key) {
+        if (!plaintext) return null;
+        const dataBytes = stringToBytes(plaintext);
+        const keyBytes = fixKey(stringToBytes(key));
+        const dataUint32 = bytesToUint32Array(dataBytes, true);
+        const keyUint32 = bytesToUint32Array(keyBytes, false);
+        const encrypted = xxteaEncryptUint32(dataUint32, keyUint32);
+        const resultBytes = uint32ArrayToBytes(encrypted, false);
+        return bytesToBase64(resultBytes);
+    }
+
+    // Public API: Decrypt base64 string with string key, return plaintext
+    function decryptBase64ToString(cipherBase64, key) {
+        if (!cipherBase64) return null;
+        let cipherBytes;
+        try {
+            cipherBytes = base64ToBytes(cipherBase64);
+        } catch (e) {
+            return null;
+        }
+        if (cipherBytes.length === 0) return null;
+        const keyBytes = fixKey(stringToBytes(key));
+        const dataUint32 = bytesToUint32Array(cipherBytes, false);
+        const keyUint32 = bytesToUint32Array(keyBytes, false);
+        const decrypted = xxteaDecryptUint32(dataUint32, keyUint32);
+        const resultBytes = uint32ArrayToBytes(decrypted, true);
+        if (resultBytes === null) return null;
+        return bytesToString(resultBytes);
+    }
+
+    // =====================================================
+    // UI Functions
+    // =====================================================
+
+    function setStatus(msg, type) {
+        const el = document.getElementById('status');
+        el.textContent = msg;
+        el.className = 'status ' + type;
+    }
+
+    function doEncrypt() {
+        const input = document.getElementById('input').value;
+        const key = document.getElementById('key').value;
+        if (!input) { setStatus('Please enter text to encrypt.', 'error'); return; }
+        if (!key) { setStatus('Please enter a key.', 'error'); return; }
+        try {
+            const result = encryptStringToBase64(input, key);
+            if (result === null) {
+                setStatus('Encryption failed.', 'error');
+                return;
+            }
+            document.getElementById('output').value = result;
+            setStatus('Encrypted successfully.', 'success');
+        } catch (e) {
+            setStatus('Error: ' + e.message, 'error');
+        }
+    }
+
+    function doDecrypt() {
+        const input = document.getElementById('input').value.trim();
+        const key = document.getElementById('key').value;
+        if (!input) { setStatus('Please enter Base64 ciphertext to decrypt.', 'error'); return; }
+        if (!key) { setStatus('Please enter a key.', 'error'); return; }
+        try {
+            const result = decryptBase64ToString(input, key);
+            if (result === null) {
+                setStatus('Decryption failed. Invalid ciphertext or wrong key.', 'error');
+                return;
+            }
+            document.getElementById('output').value = result;
+            setStatus('Decrypted successfully.', 'success');
+        } catch (e) {
+            setStatus('Error: ' + e.message, 'error');
+        }
+    }
+
+    function doSwap() {
+        const output = document.getElementById('output').value;
+        if (output) {
+            document.getElementById('input').value = output;
+            document.getElementById('output').value = '';
+            setStatus('Output copied to input.', 'success');
+        }
+    }
+
+    function doClear() {
+        document.getElementById('input').value = '';
+        document.getElementById('key').value = '';
+        document.getElementById('output').value = '';
+        setStatus('', '');
+    }
+
+    // =====================================================
+    // Built-in Test Suite
+    // =====================================================
+
+    function runTests() {
+        const resultsEl = document.getElementById('test-results');
+        let output = '';
+        let passed = 0;
+        let failed = 0;
+
+        function log(msg, cls) {
+            output += '<span class="' + cls + '">' + escapeHtml(msg) + '</span>\n';
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function test(name, fn) {
+            try {
+                const result = fn();
+                if (result === true) {
+                    log('  PASS: ' + name, 'test-pass');
+                    passed++;
+                } else {
+                    log('  FAIL: ' + name + ' => ' + result, 'test-fail');
+                    failed++;
+                }
+            } catch (e) {
+                log('  FAIL: ' + name + ' => ' + e.message, 'test-fail');
+                failed++;
+            }
+        }
+
+        log('=== XXTEA Test Suite ===', 'test-info');
+        log('', '');
+
+        // Test 1: Basic encrypt/decrypt roundtrip (from README)
+        log('--- Basic Roundtrip Tests ---', 'test-info');
+        test('Encrypt/Decrypt "Hello World! 你好，中国" with key "1234567890"', () => {
+            const text = 'Hello World! 你好，中国';
+            const key = '1234567890';
+            const encrypted = encryptStringToBase64(text, key);
+            if (!encrypted) return 'Encryption returned null';
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        test('Encrypt/Decrypt simple ASCII text', () => {
+            const text = 'Hello World';
+            const key = 'testkey';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        test('Encrypt/Decrypt single character', () => {
+            const text = 'A';
+            const key = 'key';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        // Test 2: Different keys produce different ciphertexts
+        log('', '');
+        log('--- Key Variation Tests ---', 'test-info');
+        test('Different keys produce different ciphertexts', () => {
+            const text = 'Same plaintext';
+            const enc1 = encryptStringToBase64(text, 'key1');
+            const enc2 = encryptStringToBase64(text, 'key2');
+            return enc1 !== enc2 ? true : 'Same ciphertext for different keys';
+        });
+
+        test('Wrong key fails to decrypt correctly', () => {
+            const text = 'Secret message';
+            const encrypted = encryptStringToBase64(text, 'correctkey');
+            const decrypted = decryptBase64ToString(encrypted, 'wrongkey');
+            return decrypted !== text ? true : 'Wrong key decrypted correctly';
+        });
+
+        // Test 3: Key padding/truncation
+        log('', '');
+        log('--- Key Padding/Truncation Tests ---', 'test-info');
+        test('Short key (padded to 16 bytes)', () => {
+            const text = 'Test padding';
+            const key = 'ab';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        test('Exactly 16-byte key', () => {
+            const text = 'Test exact key';
+            const key = '1234567890123456';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        test('Long key (truncated to 16 bytes)', () => {
+            const text = 'Test truncation';
+            const key = '12345678901234567890extra';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        // Test 4: Unicode / special characters
+        log('', '');
+        log('--- Unicode & Special Character Tests ---', 'test-info');
+        test('Chinese characters', () => {
+            const text = '你好世界';
+            const key = 'unicode-key';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        test('Emoji text', () => {
+            const text = 'Hello 🌍🔐🎉';
+            const key = 'emoji-key';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        test('Mixed languages', () => {
+            const text = 'Hello こんにちは Привет مرحبا';
+            const key = 'multilang';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        test('Special characters & symbols', () => {
+            const text = '!@#$%^&*()_+-=[]{}|;:\'",.<>?/`~';
+            const key = 'special';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        // Test 5: Edge cases
+        log('', '');
+        log('--- Edge Case Tests ---', 'test-info');
+        test('Empty input returns null', () => {
+            const result = encryptStringToBase64('', 'key');
+            return result === null ? true : 'Expected null, got: ' + result;
+        });
+
+        test('Whitespace-only input', () => {
+            const text = '   \t\n  ';
+            const key = 'ws-key';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Got: ' + decrypted;
+        });
+
+        test('Long text (1000 chars)', () => {
+            const text = 'A'.repeat(1000);
+            const key = 'longtext';
+            const encrypted = encryptStringToBase64(text, key);
+            const decrypted = decryptBase64ToString(encrypted, key);
+            return decrypted === text ? true : 'Length mismatch: ' + (decrypted ? decrypted.length : 'null');
+        });
+
+        test('Invalid Base64 returns null on decrypt', () => {
+            const result = decryptBase64ToString('not-valid-base64!!!', 'key');
+            return result === null ? true : 'Expected null, got: ' + result;
+        });
+
+        test('Random garbage Base64 returns null on decrypt', () => {
+            const result = decryptBase64ToString('AAAA', 'key');
+            return result === null ? true : 'Expected null, got: ' + result;
+        });
+
+        // Test 6: Deterministic output
+        log('', '');
+        log('--- Determinism Tests ---', 'test-info');
+        test('Same input + key = same ciphertext', () => {
+            const text = 'Deterministic test';
+            const key = 'detkey';
+            const enc1 = encryptStringToBase64(text, key);
+            const enc2 = encryptStringToBase64(text, key);
+            return enc1 === enc2 ? true : 'Different ciphertexts: ' + enc1 + ' vs ' + enc2;
+        });
+
+        // Summary
+        log('', '');
+        const total = passed + failed;
+        if (failed === 0) {
+            log('=== All ' + total + ' tests passed! ===', 'test-pass');
+        } else {
+            log('=== ' + passed + '/' + total + ' tests passed, ' + failed + ' failed ===', 'test-fail');
+        }
+
+        resultsEl.innerHTML = output;
+    }
+    </script>
+</body>
+</html>
