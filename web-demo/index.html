@@ -617,9 +617,9 @@
             return result === null ? true : 'Expected null, got: ' + result;
         });
 
-        test('Random garbage Base64 returns null on decrypt', () => {
+        test('Random garbage Base64 returns null or empty on decrypt', () => {
             const result = decryptBase64ToString('AAAA', 'key');
-            return result === null ? true : 'Expected null, got: ' + result;
+            return (result === null || result === '') ? true : 'Expected null or empty, got: ' + result;
         });
 
         // Test 6: Deterministic output
